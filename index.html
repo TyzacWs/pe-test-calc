@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b5fff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>PE Water Main Test Calculator</title>
+
+  <link rel="manifest" href="manifest.json" />
+
+  <style>
+    :root { --bg:#0b1220; --card:#121b2f; --muted:#94a3b8; --text:#e5e7eb; --accent:#0b5fff; --bad:#ef4444; --good:#22c55e; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:linear-gradient(180deg,#070b14, #0b1220); color:var(--text); }
+    header { padding:16px 16px 8px; }
+    h1 { margin:0; font-size:18px; font-weight:700; }
+    p { margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.4; }
+    main { padding: 12px 16px 80px; max-width: 720px; margin: 0 auto; }
+    .grid { display:grid; gap:12px; }
+    .card { background:rgba(18,27,47,.92); border:1px solid rgba(148,163,184,.15); border-radius:14px; padding:14px; box-shadow: 0 10px 25px rgba(0,0,0,.25); }
+    .card h2 { margin:0 0 10px; font-size:14px; letter-spacing:.2px; }
+    label { display:block; font-size:12px; color:var(--muted); margin:10px 0 6px; }
+    input, select {
+      width:100%; box-sizing:border-box; padding:12px 12px;
+      border-radius:12px; border:1px solid rgba(148,163,184,.20);
+      background:#0b1220; color:var(--text); font-size:16px;
+      outline:none;
+    }
+    input:focus, select:focus { border-color: rgba(11,95,255,.7); box-shadow: 0 0 0 3px rgba(11,95,255,.20); }
+    .row { display:grid; gap:10px; grid-template-columns: 1fr; }
+    @media (min-width: 520px){ .row.two { grid-template-columns: 1fr 1fr; } .row.three { grid-template-columns: 1fr 1fr 1fr; } }
+    .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    button {
+      border:0; border-radius:12px; padding:12px 14px;
+      background:var(--accent); color:white; font-weight:700; font-size:14px;
+    }
+    button.secondary { background: transparent; border:1px solid rgba(148,163,184,.25); color:var(--text); }
+    .result {
+      display:grid; gap:10px;
+      padding:12px; border-radius:12px;
+      border:1px solid rgba(148,163,184,.18);
+      background: rgba(11,18,32,.65);
+    }
+    .kv { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .k { color:var(--muted); font-size:12px; }
+    .v { font-variant-numeric: tabular-nums; font-size:14px; }
+    .status { font-size:16px; font-weight:900; }
+    .status.pass { color:var(--good); }
+    .status.fail { color:var(--bad); }
+    footer {
+      position:fixed; left:0; right:0; bottom:0;
+      background: rgba(7,11,20,.85);
+      border-top:1px solid rgba(148,163,184,.15);
+      padding:10px 16px;
+      backdrop-filter: blur(10px);
+    }
+    .footerwrap { max-width:720px; margin:0 auto; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .tiny { font-size:12px; color:var(--muted); }
+    .pill { padding:6px 10px; border-radius:999px; border:1px solid rgba(148,163,184,.25); font-size:12px; color:var(--text); }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div style="max-width:720px;margin:0 auto;">
+      <h1>PE Water Main Test Calculator</h1>
+      <p>Enter volume added at 2h, 3h, 4h, 5h. Calculates ΔV(3h−2h), ΔV(5h−4h), Vall and PASS/FAIL per your method.</p>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <h2>Hourly volume readings (Litres)</h2>
+      <div class="row two">
+        <div>
+          <label for="v2">Volume added at 2 hours (V2)</label>
+          <input id="v2" inputmode="decimal" placeholder="e.g. 120" />
+        </div>
+        <div>
+          <label for="v3">Volume added at 3 hours (V3)</label>
+          <input id="v3" inputmode="decimal" placeholder="e.g. 160" />
+        </div>
+      </div>
+      <div class="row two">
+        <div>
+          <label for="v4">Volume added at 4 hours (V4)</label>
+          <input id="v4" inputmode="decimal" placeholder="e.g. 190" />
+        </div>
+        <div>
+          <label for="v5">Volume added at 5 hours (V5)</label>
+          <input id="v5" inputmode="decimal" placeholder="e.g. 210" />
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="calcBtn">Calculate</button>
+        <button class="secondary" id="resetBtn" type="button">Reset</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Vall (make-up allowance)</h2>
+
+      <label for="vallMode">Choose how to enter Vall</label>
+      <select id="vallMode">
+        <option value="calc" selected>Calculate Vall from L, D, H</option>
+        <option value="direct">Enter Vall directly (L/h)</option>
+      </select>
+
+      <div id="vallCalc">
+        <div class="row three">
+          <div>
+            <label for="L">L = Test length (km)</label>
+            <input id="L" inputmode="decimal" placeholder="e.g. 1.2" />
+          </div>
+          <div>
+            <label for="D">D = Pipe nominal diameter (m)</label>
+            <input id="D" inputmode="decimal" placeholder="e.g. 0.160" />
+          </div>
+          <div>
+            <label for="H">H = Average test head (m)</label>
+            <input id="H" inputmode="decimal" placeholder="e.g. 30" />
+          </div>
+        </div>
+        <p class="tiny" style="margin-top:10px;">Formula: <b>Vall = 0.14 × L × D × H</b> (litres/hour)</p>
+      </div>
+
+      <div id="vallDirect" style="display:none;">
+        <label for="VallDirect">Vall (litres/hour)</label>
+        <input id="VallDirect" inputmode="decimal" placeholder="e.g. 0.94" />
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Results</h2>
+      <div class="result" id="resultsBox">
+        <div class="kv"><div class="k">ΔV(3h−2h) = V3 − V2</div><div class="v" id="dv32">—</div></div>
+        <div class="kv"><div class="k">ΔV(5h−4h) = V5 − V4</div><div class="v" id="dv54">—</div></div>
+        <div class="kv"><div class="k">Vall (L/h)</div><div class="v" id="vallOut">—</div></div>
+        <div class="kv"><div class="k">Allowable = 0.55×ΔV(3h−2h) + Vall</div><div class="v" id="allowOut">—</div></div>
+        <div class="kv"><div class="k">Decision</div><div class="status" id="status">—</div></div>
+      </div>
+      <p class="tiny" style="margin-top:10px;">
+        PASS rule: <b>ΔV(5h−4h) ≤ 0.55 × ΔV(3h−2h) + Vall</b>
+      </p>
+    </section>
+<section class="card">
+  <h2>Test Report</h2>
+
+  <div class="row two">
+    <div>
+      <label for="location">Test Section Location</label>
+      <input id="location" placeholder="e.g. Stage 2 – Main Line" />
+    </div>
+    <div>
+      <label for="date">Test Date</label>
+      <input id="date" type="date" />
+    </div>
+  </div>
+
+  <div class="row three">
+    <div>
+      <label for="temp">Water Temperature (°C)</label>
+      <input id="temp" inputmode="decimal" placeholder="e.g. 22" />
+    </div>
+    <div>
+      <label for="pressure">Test Pressure (kPa)</label>
+      <input id="pressure" inputmode="decimal" placeholder="e.g. 1200" />
+    </div>
+    <div>
+      <label for="duration">Test Duration (hours)</label>
+      <input id="duration" inputmode="decimal" placeholder="e.g. 5" />
+    </div>
+  </div>
+
+  <div class="btns">
+    <button id="genReportBtn">Generate Report</button>
+    <button class="secondary" id="copyReportBtn" type="button">Copy Report</button>
+  </div>
+
+  <label style="margin-top:12px;">Report Output</label>
+  <textarea id="reportOutput" rows="14"
+    style="width:100%;border-radius:12px;padding:12px;background:#0b1220;color:#e5e7eb;border:1px solid rgba(148,163,184,.2);font-size:13px;"></textarea>
+</section>
+  </main>
+
+  <footer>
+    <div class="footerwrap">
+      <div class="tiny">Offline-ready (PWA). Add to Home Screen on Android/iPhone.</div>
+      <div class="pill" id="offlineTag">Checking…</div>
+    </div>
+  </footer>
+
+  <script>
+    // PWA service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      });
+    }
+
+    const $ = (id) => document.getElementById(id);
+
+    const toNum = (val) => {
+      if (val == null) return NaN;
+      const s = String(val).trim().replace(/,/g,'');
+      if (s === '') return NaN;
+      return Number(s);
+    };
+
+    const fmt = (n) => {
+      if (!isFinite(n)) return '—';
+      // show up to 3 decimals, trim trailing zeros
+      return (Math.round(n * 1000) / 1000).toString();
+    };
+
+    function getVall() {
+      const mode = $('vallMode').value;
+      if (mode === 'direct') {
+        return toNum($('VallDirect').value);
+      }
+      const L = toNum($('L').value);
+      const D = toNum($('D').value);
+      const H = toNum($('H').value);
+      return 0.14 * L * D * H;
+    }
+
+    function calculate() {
+      const v2 = toNum($('v2').value);
+      const v3 = toNum($('v3').value);
+      const v4 = toNum($('v4').value);
+      const v5 = toNum($('v5').value);
+
+      const dv32 = v3 - v2;
+      const dv54 = v5 - v4;
+
+      const Vall = getVall();
+      const allowable = (0.55 * dv32) + Vall;
+
+      $('dv32').textContent = fmt(dv32) + ' L';
+      $('dv54').textContent = fmt(dv54) + ' L';
+      $('vallOut').textContent = fmt(Vall) + ' L/h';
+      $('allowOut').textContent = fmt(allowable) + ' L';
+
+      const statusEl = $('status');
+
+      const okInputs =
+        isFinite(dv32) && isFinite(dv54) && isFinite(Vall) &&
+        !isNaN(v2) && !isNaN(v3) && !isNaN(v4) && !isNaN(v5);
+
+      if (!okInputs) {
+        statusEl.textContent = 'Enter all required numbers';
+        statusEl.className = 'status fail';
+        return;
+      }
+
+      if (dv54 <= allowable) {
+        statusEl.textContent = 'PASS';
+        statusEl.className = 'status pass';
+      } else {
+        statusEl.textContent = 'FAIL';
+        statusEl.className = 'status fail';
+      }
+    }
+
+    function resetAll() {
+      ['v2','v3','v4','v5','L','D','H','VallDirect'].forEach(id => $(id).value = '');
+      ['dv32','dv54','vallOut','allowOut'].forEach(id => $(id).textContent = '—');
+      $('status').textContent = '—';
+      $('status').className = 'status';
+      $('vallMode').value = 'calc';
+      $('vallCalc').style.display = '';
+      $('vallDirect').style.display = 'none';
+    }
+
+    $('calcBtn').addEventListener('click', calculate);
+    $('resetBtn').addEventListener('click', resetAll);
+
+    $('vallMode').addEventListener('change', (e) => {
+      const mode = e.target.value;
+      $('vallCalc').style.display = (mode === 'calc') ? '' : 'none';
+      $('vallDirect').style.display = (mode === 'direct') ? '' : 'none';
+    });
+
+    // Offline indicator
+    function updateOnline() {
+      $('offlineTag').textContent = navigator.onLine ? 'Online' : 'Offline';
+    }
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    updateOnline();
+  </script>
+</body>
+</html>
